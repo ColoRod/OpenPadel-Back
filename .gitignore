@@ -1,0 +1,43 @@
+# ------------------------------------
+# Node / NPM
+# ------------------------------------
+# Dependency directory
+/node_modules
+# Production/build directory (if you compile TS/JS)
+/dist
+/build
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# ------------------------------------
+# Configuration and Secrets
+# ------------------------------------
+# Environment variables (CRITICAL: Never commit credentials)
+.env
+.env.local
+.env.*.local
+.DS_Store
+
+# ------------------------------------
+# MySQL / Database
+# ------------------------------------
+# Local database files (if you use SQLite, not typical for MySQL)
+*.db
+*.sqlite
+*.sqlite3
+
+# MySQL specific files
+# Workbench temporary files
+*.wmb
+# Dumps/exports
+*.sql
+
+# ------------------------------------
+# OS Generated Files
+# ------------------------------------
+.DS_Store
+Thumbs.db
