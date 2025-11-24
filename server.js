@@ -11,8 +11,12 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // 3. MIDDLEWARES (Configuración de la Aplicación)
+const allowedOrigin = process.env.NODE_ENV === 'production' 
+    ? process.env.FRONTEND_URL 
+    : 'http://localhost:5173';
+
 app.use(cors({
-    origin: 'http://localhost:5173', // Permite solo la conexión de tu Frontend
+    origin: allowedOrigin,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
 }));
