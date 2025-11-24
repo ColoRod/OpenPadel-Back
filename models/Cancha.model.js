@@ -13,30 +13,30 @@ async function findAllCanchasConCaracteristicas() {
     // La compleja consulta SQL para unir Canchas, Clubes y Características
     const sql = `
         SELECT
-            C.cancha_id,
-            C.nombre AS cancha_nombre,
-            CONCAT('/images/', C.imagen_url) AS imagen_url,
-            CAST(C.precio_base AS FLOAT) AS precio_base,
-            CL.nombre AS club_nombre,
-            CL.direccion AS club_direccion,
+            c.cancha_id,
+            c.nombre AS cancha_nombre,
+            CONCAT('/images/', c.imagen_url) AS imagen_url,
+            CAST(c.precio_base AS FLOAT) AS precio_base,
+            cl.nombre AS club_nombre,
+            cl.direccion AS club_direccion,
             
             -- Crea un array JSON de objetos {nombre, icono_url} por cada cancha
             JSON_ARRAYAGG(
-                JSON_OBJECT('text', T.nombre, 'imageUrl', CONCAT('/images/', T.icono_url))
+                JSON_OBJECT('text', t.nombre, 'imageUrl', CONCAT('/images/', t.icono_url))
             ) AS caracteristicas
             
         FROM
-            Canchas C
+            canchas c
         JOIN
-            Clubes CL ON C.club_id = CL.club_id
+            clubes cl ON c.club_id = cl.club_id
         LEFT JOIN
-            Cancha_Caracteristica CC ON C.cancha_id = CC.cancha_id
+            cancha_caracteristica cc ON c.cancha_id = cc.cancha_id
         LEFT JOIN
-            Caracteristicas T ON CC.caract_id = T.caract_id
+            caracteristicas t ON cc.caract_id = t.caract_id
         GROUP BY
-            C.cancha_id, C.nombre, C.imagen_url, CL.nombre, CL.direccion
+            c.cancha_id, c.nombre, c.imagen_url, cl.nombre, cl.direccion
         HAVING
-            C.cancha_id IS NOT NULL; -- Asegura que solo devolvemos canchas válidas
+            c.cancha_id IS NOT NULL; -- Asegura que solo devolvemos canchas válidas
     `;
 
     try {

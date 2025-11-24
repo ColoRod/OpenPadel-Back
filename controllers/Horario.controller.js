@@ -81,7 +81,7 @@ async function getHorariosDisponibles(req, res) {
         const diaSemana = DIAS[dayIndex];
         
         // Asumimos que la tabla Canchas tiene una columna club_id (¡crucial!)
-        const [canchaResult] = await db.query('SELECT club_id FROM Canchas WHERE cancha_id = ?', [canchaId]);
+        const [canchaResult] = await db.query('SELECT club_id FROM canchas WHERE cancha_id = ?', [canchaId]);
         if (!canchaResult || canchaResult.length === 0) {
              return res.status(404).json({ message: "Cancha no encontrada." });
         }

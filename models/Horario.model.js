@@ -35,7 +35,7 @@ async function getHorariosOcupados(canchaId, fecha) {
     // Buscamos todas las reservas que NO estén canceladas para esa cancha y fecha.
     const sql = `
         SELECT hora_inicio, estado
-        FROM Reservas
+        FROM reservas
         WHERE cancha_id = ? 
         AND fecha = ? 
         AND estado IN ('PENDIENTE', 'CONFIRMADA');
@@ -62,7 +62,7 @@ async function getHorariosOcupados(canchaId, fecha) {
 async function createReserva(canchaId, usuarioId, fecha, horaInicio, horaFin) {
     // Insertamos el valor literal 'PENDIENTE' y calculamos la expiración (+20 MINUTE).
     const sql = `
-        INSERT INTO Reservas (cancha_id, usuario_id, fecha, hora_inicio, hora_fin, estado, expira_en)
+        INSERT INTO reservas (cancha_id, usuario_id, fecha, hora_inicio, hora_fin, estado, expira_en)
         VALUES (?, ?, ?, ?, ?, 'PENDIENTE', DATE_ADD(NOW(), INTERVAL 20 MINUTE));
     `;
     const values = [canchaId, usuarioId, fecha, horaInicio, horaFin];
@@ -86,7 +86,7 @@ async function createReserva(canchaId, usuarioId, fecha, horaInicio, horaFin) {
  */
 async function deleteReservasExpiradas() {
     const sql = `
-        DELETE FROM Reservas
+        DELETE FROM reservas
         WHERE estado = 'PENDIENTE' 
         AND expira_en < NOW();
     `;
