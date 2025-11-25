@@ -10,6 +10,7 @@ const CronService = require('./services/CronService');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.set('trust proxy', 1);
 // 3. MIDDLEWARES (Configuración de la Aplicación)
 const allowedOrigin = process.env.NODE_ENV === 'production' 
     ? process.env.FRONTEND_URL 
