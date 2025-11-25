@@ -10,16 +10,26 @@ const CronService = require('./services/CronService');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.set('trust proxy', 1);
 // 3. MIDDLEWARES (Configuración de la Aplicación)
-const allowedOrigin = process.env.NODE_ENV === 'production' 
-    ? process.env.FRONTEND_URL 
-    : 'http://localhost:5173';
+// Permitimos orígenes configurables vía variable de entorno `CORS_ORIGINS`
+// Ej: CORS_ORIGINS="http://localhost:5173,https://mi-frontend.vercel.app"
+const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:5173')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
 
 app.use(cors({
-    origin: allowedOrigin,
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    credentials: true,
+  origin: function(origin, callback) {
+    // Si no hay origin (por ejemplo peticiones desde Postman o servidor to servidor), dejamos pasar
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      return callback(null, true);
+    }
+    console.warn(`CORS blocked origin: ${origin}`);
+    return callback(new Error('Not allowed by CORS'));
+  },
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  credentials: true,
 }));
 
 // Permite que Express lea el JSON del cuerpo de la solicitud
@@ -34,8 +44,8 @@ const horarioRoutes = require('./routes/Horario.routes');
 
 // Usa el prefijo /api/v1/canchas para todas las rutas definidas en cancha.routes.js
 // La ruta completa será: GET http://localhost:3000/api/v1/canchas
-app.use('/api/v1', canchaRoutes);
-app.use('/api/v1', horarioRoutes); 
+app.use('/api/v1/canchas', canchaRoutes);
+app.use('/api/v1/horarios', horarioRoutes); 
 
 CronService.startCleanupJob();
 
