@@ -33,8 +33,8 @@ const horarioRoutes = require('./routes/Horario.routes');
 
 // Usa el prefijo /api/v1/canchas para todas las rutas definidas en cancha.routes.js
 // La ruta completa será: GET http://localhost:3000/api/v1/canchas
-app.use('/api/v1/canchas', canchaRoutes);
-app.use('/api/v1/horarios', horarioRoutes); 
+app.use('/api/v1', canchaRoutes);
+app.use('/api/v1', horarioRoutes); 
 
 CronService.startCleanupJob();
 
