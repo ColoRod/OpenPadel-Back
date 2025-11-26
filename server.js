@@ -13,24 +13,44 @@ const PORT = process.env.PORT || 3000;
 // 3. MIDDLEWARES (Configuración de la Aplicación)
 // Permitimos orígenes configurables vía variable de entorno `CORS_ORIGINS`
 // Ej: CORS_ORIGINS="http://localhost:5173,https://mi-frontend.vercel.app"
-const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:5173')
+const allowedOrigins = (process.env.CORS_ORIGINS || '')
   .split(',')
-  .map(s => s.trim())
+  .map(s => s.trim().replace(/\/$/, ''))
   .filter(Boolean);
+
+// Configuración flexible de CORS.
+// Permite orígenes listados en CORS_ORIGINS, el valor exacto en FRONTEND_URL,
+// y opcionalmente todos los subdominios de Vercel si ALLOW_VERCEL=true.
+const allowVercel = (process.env.ALLOW_VERCEL || 'false') === 'true';
+const frontendUrl = process.env.FRONTEND_URL && process.env.FRONTEND_URL.trim();
 
 app.use(cors({
   origin: function(origin, callback) {
-    // Si no hay origin (por ejemplo peticiones desde Postman o servidor to servidor), dejamos pasar
+    // Peticiones sin Origin (Postman, server-to-server) se permiten
     if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      return callback(null, true);
-    }
-    console.warn(`CORS blocked origin: ${origin}`);
+
+    const o = origin.trim();
+
+    if (allowedOrigins.indexOf(o) !== -1) return callback(null, true);
+    if (frontendUrl && o === frontendUrl) return callback(null, true);
+    if (allowVercel && /(^|\.)vercel\.app$/.test(o)) return callback(null, true);
+
+    console.warn(`CORS blocked origin: ${o}`);
     return callback(new Error('Not allowed by CORS'));
   },
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
   credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 }));
+
+// Middleware de logging para depuración de CORS (muestra incoming origin)
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin) console.debug(`Incoming request origin: ${origin}`);
+  next();
+});
 
 // Permite que Express lea el JSON del cuerpo de la solicitud
 app.use(bodyParser.json()); 
