@@ -1,6 +1,18 @@
 // server/server.js 
 // 1. IMPORTACIONES
-require('dotenv').config(); // Carga las variables del .env
+// Cargamos .env y, en modo development, .env.local para uso local.
+const fs = require('fs');
+const dotenv = require('dotenv');
+// Carga variables desde .env (si existe)
+dotenv.config();
+// Si estamos en modo development, intentar cargar .env.local (no sobrescribe variables ya definidas)
+if ((process.env.NODE_ENV || 'development') === 'development') {
+  const localEnvPath = __dirname + '/.env.local';
+  if (fs.existsSync(localEnvPath)) {
+    dotenv.config({ path: localEnvPath });
+    console.log('Env: cargado .env.local para desarrollo');
+  }
+}
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors'); // Necesario para la comunicación entre Frontend y Backend
