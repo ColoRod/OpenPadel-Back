@@ -2,15 +2,19 @@
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
-    "cross-env": "^10.1.0",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "mysql2": "^3.15.3",
-    "node-cron": "^4.2.1"
+    "node-cron": "^4.2.1",
+    "nodemon": "^3.1.11"
   },
   "scripts": {
     "start": "cross-env NODE_ENV=production node server.js",
-    "dev": "cross-env NODE_ENV=development nodemon server.js"
+    "dev": "cross-env NODE_ENV=development nodemon server.js",
+    "seed": "node seed.js"
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0"
   }
 }

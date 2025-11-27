@@ -68,22 +68,50 @@ app.use((req, res, next) => {
 app.use(bodyParser.json()); 
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// Servir archivos estáticos: uploads e images (alias a uploads)
+const path = require('path');
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/images', express.static(path.join(__dirname, 'uploads')));
+
 
 // 4. CONEXIÓN DE RUTAS API (Endpoints)
 // Importa tus rutas de canchas que acabamos de crear
 const canchaRoutes = require('./routes/cancha.routes');
 const horarioRoutes = require('./routes/Horario.routes'); 
 
+// Rutas añadidas recientemente (clubes / reservas / usuario)
+const clubesRoutes = require('./routes/clubes');
+const reservasRoutes = require('./routes/reservas');
+const usuarioRoutes = require('./routes/usuario');
+
 // Usa el prefijo /api/v1/canchas para todas las rutas definidas en cancha.routes.js
 // La ruta completa será: GET http://localhost:3000/api/v1/canchas
 app.use('/api/v1/canchas', canchaRoutes);
 app.use('/api/v1/horarios', horarioRoutes); 
+
+// Montar las rutas del nuevo módulo integrado
+app.use('/api/clubes', clubesRoutes);
+app.use('/api/reservas', reservasRoutes);
+app.use('/api/usuario', usuarioRoutes);
 
 CronService.startCleanupJob();
 
 // 5. RUTA DE PRUEBA SIMPLE (Para verificar que el servidor está activo)
 app.get('/', (req, res) => {
     res.status(200).send("API de Reservas de OpenPadel Activa.");
+});
+
+// 404 handler para rutas no definidas
+app.use((req, res) => {
+  res.status(404).json({ error: 'Not Found' });
+});
+
+// Error handler centralizado
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err && err.stack ? err.stack : err);
+  if (res.headersSent) return next(err);
+  const status = err && err.status ? err.status : 500;
+  res.status(status).json({ error: err.message || 'Internal Server Error' });
 });
 
 
