@@ -6,14 +6,17 @@ const db = require('../config/db.config');
 /**
  * Obtiene la lista de todas las canchas disponibles, sus clubes asociados
  * y devuelve sus características como un ARRAY JSON.
+ * Opcionalmente puede filtrar por nombre de club.
  *
+ * @param {string} clubName - Nombre del club para filtrar (opcional)
  * @returns {Promise<Array>} Un array de objetos que representan las canchas con sus detalles.
  */
-async function findAllCanchasConCaracteristicas() {
+async function findAllCanchasConCaracteristicas(clubName = null) {
     // La compleja consulta SQL para unir Canchas, Clubes y Características
-    const sql = `
+    let sql = `
         SELECT
             c.cancha_id,
+            cl.club_id AS club_id,
             c.nombre AS cancha_nombre,
             CONCAT('/images/', c.imagen_url) AS imagen_url,
             CAST(c.precio_base AS FLOAT) AS precio_base,
@@ -33,15 +36,26 @@ async function findAllCanchasConCaracteristicas() {
             cancha_caracteristica cc ON c.cancha_id = cc.cancha_id
         LEFT JOIN
             caracteristicas t ON cc.caract_id = t.caract_id
+    `;
+    
+    // Add WHERE clause if clubName filter is provided
+    if (clubName) {
+        sql += ` WHERE cl.nombre = ?`;
+    }
+    
+    sql += `
         GROUP BY
             c.cancha_id, c.nombre, c.imagen_url, cl.nombre, cl.direccion
         HAVING
-            c.cancha_id IS NOT NULL; -- Asegura que solo devolvemos canchas válidas
+            c.cancha_id IS NOT NULL
+        ORDER BY
+            c.cancha_id ASC;
     `;
 
     try {
         // Ejecutamos la query usando el pool de conexiones
-        const [results] = await db.query(sql);
+        const params = clubName ? [clubName] : [];
+        const [results] = await db.query(sql, params);
         // results contiene un array de los registros devueltos por MySQL
         return results;
     } catch (error) {

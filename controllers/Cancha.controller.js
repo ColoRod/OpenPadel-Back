@@ -58,6 +58,42 @@ async function getCanchasConDetalles(req, res) {
     }
 }
 
+/**
+ * @route GET /api/v1/canchas/club/:clubName
+ * @description Obtiene la lista de canchas para un club específico.
+ * @access Public
+ */
+async function getCanchasByClubName(req, res) {
+    try {
+        const { clubName } = req.params;
+        const decodedClubName = decodeURIComponent(clubName);
+        
+        const canchasRaw = await CanchaModel.findAllCanchasConCaracteristicas(decodedClubName);
+        
+        // Procesamos los resultados para limpiar el JSON y remover nulos
+        const canchas = canchasRaw.map(cleanAndParseFeatures);
+
+        if (canchas.length === 0) {
+            return res.status(200).json({
+                message: `No se encontraron canchas para el club: ${decodedClubName}`,
+                data: []
+            });
+        }
+
+        res.status(200).json({
+            message: "Canchas obtenidas exitosamente.",
+            data: canchas
+        });
+
+    } catch (error) {
+        console.error("Error en el controlador al obtener canchas por club:", error.message);
+        res.status(500).json({
+            message: "Error interno del servidor al procesar la solicitud."
+        });
+    }
+}
+
 module.exports = {
-    getCanchasConDetalles
+    getCanchasConDetalles,
+    getCanchasByClubName
 };
