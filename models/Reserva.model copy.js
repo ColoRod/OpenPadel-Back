@@ -11,9 +11,9 @@ const getAll = () => {
             c.nombre AS nombreCancha, 
             u.nombre AS nombreUsuario,
             u.apellido AS apellidoUsuario
-        FROM Reservas r
-        JOIN Usuarios u ON r.usuario_id = u.user_id
-        JOIN Canchas c ON r.cancha_id = c.cancha_id
+        FROM reservas r
+        JOIN usuarios u ON r.usuario_id = u.user_id
+        JOIN canchas c ON r.cancha_id = c.cancha_id
         ORDER BY r.fecha ASC, r.hora_inicio ASC
     `;
     return db.execute(sql);
@@ -30,9 +30,9 @@ const getAllByAdmin = (adminId) => {
             c.nombre AS nombreCancha, 
             u.nombre AS nombreUsuario,
             u.apellido AS apellidoUsuario
-        FROM Reservas r
-        JOIN Usuarios u ON r.usuario_id = u.user_id
-        JOIN Canchas c ON r.cancha_id = c.cancha_id
+        FROM reservas r
+        JOIN usuarios u ON r.usuario_id = u.user_id
+        JOIN canchas c ON r.cancha_id = c.cancha_id
         JOIN clubes cl ON c.club_id = cl.club_id
         WHERE cl.admin_id = ?
         ORDER BY r.fecha ASC, r.hora_inicio ASC
@@ -41,12 +41,12 @@ const getAllByAdmin = (adminId) => {
 };
 
 const confirm = (id) => {
-    const sql = "UPDATE Reservas SET estado = 'CONFIRMADA' WHERE reserva_id = ?";
+    const sql = "UPDATE reservas SET estado = 'CONFIRMADA' WHERE reserva_id = ?";
     return db.execute(sql, [id]);
 };
 
 const remove = (id) => {
-    const sql = "DELETE FROM Reservas WHERE reserva_id = ?";
+    const sql = "DELETE FROM reservas WHERE reserva_id = ?";
     return db.execute(sql, [id]);
 };
 
