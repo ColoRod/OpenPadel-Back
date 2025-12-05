@@ -1,7 +1,7 @@
 // server/controllers/Horario.controller.js
-const HorarioModel = require('../models/Horario.model');
-const db = require('../config/db.config');
-const CanchaModel = require('../models/Cancha.model'); // Para obtener el club_id
+import * as HorarioModel from '../models/Horario.model.js';
+import db from '../config/db.config.js';
+import * as CanchaModel from '../models/Cancha.model.js'; // Para obtener el club_id
 
 /**
  * Función auxiliar para convertir un Date a un string de tiempo 'HH:MM:00'.
@@ -155,25 +155,22 @@ async function getHorariosDisponibles(req, res) {
 /**
  * @route POST /api/v1/horarios
  * @description Crea una nueva reserva para un slot específico.
- * @access Protegido (simularemos el usuario por ahora)
+ * @access Protegido (utiliza el userId del cliente)
  */
 async function createReserva(req, res) {
-    // 🔑 NOTA: En la implementación final, el usuarioId vendría del JWT
-    const SIMULATED_USER_ID = 2; // Usuario Jugador de la Base de Datos
+    const { canchaId, userId, fecha, horaInicio, horaFin } = req.body;
 
-    const { canchaId, fecha, horaInicio, horaFin } = req.body;
-
-    if (!canchaId || !fecha || !horaInicio || !horaFin) {
+    if (!canchaId || !userId || !fecha || !horaInicio || !horaFin) {
         return res.status(400).json({
-            message: "Faltan parámetros: canchaId, fecha, horaInicio y horaFin son requeridos."
+            message: "Faltan parámetros: canchaId, userId, fecha, horaInicio y horaFin son requeridos."
         });
     }
 
     try {
-        // Ejecutamos la inserción en el modelo
+        // Ejecutamos la inserción en el modelo usando el userId proporcionado
         const reservaId = await HorarioModel.createReserva(
             canchaId,
-            SIMULATED_USER_ID,
+            userId,
             fecha,
             horaInicio,
             horaFin
@@ -200,7 +197,4 @@ async function createReserva(req, res) {
     }
 }
 
-module.exports = {
-    getHorariosDisponibles,
-    createReserva
-};
+export { getHorariosDisponibles, createReserva };

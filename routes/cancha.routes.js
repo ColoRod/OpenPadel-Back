@@ -1,7 +1,7 @@
 // server/routes/cancha.routes.js
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const CanchaController = require('../controllers/Cancha.controller');
+import * as CanchaController from '../controllers/Cancha.controller.js';
 
 // Rutas más específicas PRIMERO
 // Obtener canchas de un club específico por nombre
@@ -11,4 +11,4 @@ router.get('/club/:clubName', CanchaController.getCanchasByClubName);
 // Definición de la ruta: GET /api/v1/canchas
 router.get('/', CanchaController.getCanchasConDetalles);
 
-module.exports = router;
+export default router;

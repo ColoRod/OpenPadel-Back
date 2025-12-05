@@ -1,22 +1,26 @@
-// server/server.js 
-// 1. IMPORTACIONES
-// Cargamos .env y, en modo development, .env.local para uso local.
-const fs = require('fs');
-const dotenv = require('dotenv');
+// 1. IMPORTACIONES y configuración de entorno
+import fs from 'fs';
+import dotenv from 'dotenv';
+import express from 'express';
+import cors from 'cors'; // Necesario para la comunicación entre Frontend y Backend
+import CronService from './services/CronService.js';
+import authRoutes from './routes/auth.routes.js';
+import userRoutes from './routes/user.routes.js';
+
 // Carga variables desde .env (si existe)
 dotenv.config();
 // Si estamos en modo development, intentar cargar .env.local (no sobrescribe variables ya definidas)
+import path from 'path';
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 if ((process.env.NODE_ENV || 'development') === 'development') {
-  const localEnvPath = __dirname + '/.env.local';
+  const localEnvPath = path.join(__dirname, '.env.local');
   if (fs.existsSync(localEnvPath)) {
     dotenv.config({ path: localEnvPath });
     console.log('Env: cargado .env.local para desarrollo');
   }
 }
-const express = require('express');
-const bodyParser = require('body-parser');
-const cors = require('cors'); // Necesario para la comunicación entre Frontend y Backend
-const CronService = require('./services/CronService');
 
 // 2. INICIALIZACIÓN
 const app = express();
@@ -65,24 +69,27 @@ app.use((req, res, next) => {
 });
 
 // Permite que Express lea el JSON del cuerpo de la solicitud
-app.use(bodyParser.json()); 
-app.use(bodyParser.urlencoded({ extended: true }));
+// Usar los parsers nativos de Express (sin dependencia extra)
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Servir archivos estáticos: uploads e images (alias a uploads)
-const path = require('path');
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/images', express.static(path.join(__dirname, 'uploads')));
 
 
 // 4. CONEXIÓN DE RUTAS API (Endpoints)
 // Importa tus rutas de canchas que acabamos de crear
-const canchaRoutes = require('./routes/cancha.routes');
-const horarioRoutes = require('./routes/Horario.routes'); 
+import canchaRoutes from './routes/cancha.routes.js';
+import horarioRoutes from './routes/Horario.routes.js'; 
 
-// Rutas añadidas recientemente (clubes / reservas / usuario)
-const clubesRoutes = require('./routes/clubes');
-const reservasRoutes = require('./routes/reservas');
-const usuarioRoutes = require('./routes/usuario');
+// Rutas añadidas recientemente (clubes / reservas)
+import clubesRoutes from './routes/clubes.js';
+import reservasRoutes from './routes/reservas.js';
+import reservaAdminRoutes from './routes/Reserva.routes.js';
+
+app.use('/auth', authRoutes);
+app.use('/users', userRoutes);
 
 // Usa el prefijo /api/v1/canchas para todas las rutas definidas en cancha.routes.js
 // La ruta completa será: GET http://localhost:3000/api/v1/canchas
@@ -90,9 +97,10 @@ app.use('/api/v1/canchas', canchaRoutes);
 app.use('/api/v1/horarios', horarioRoutes); 
 
 // Montar las rutas del nuevo módulo integrado
+// IMPORTANTE: Las rutas admin deben ir ANTES de las genéricas para evitar que sean interceptadas
+app.use('/api/reservas/admin', reservaAdminRoutes);
 app.use('/api/clubes', clubesRoutes);
 app.use('/api/reservas', reservasRoutes);
-app.use('/api/usuario', usuarioRoutes);
 
 CronService.startCleanupJob();
 

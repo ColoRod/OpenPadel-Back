@@ -1,5 +1,5 @@
 // server/controllers/Cancha.controller.js
-const CanchaModel = require('../models/Cancha.model');
+import * as CanchaModel from '../models/Cancha.model.js';
 /**
  * Función auxiliar para limpiar y parsear el array JSON de características.
  */
@@ -93,7 +93,4 @@ async function getCanchasByClubName(req, res) {
     }
 }
 
-module.exports = {
-    getCanchasConDetalles,
-    getCanchasByClubName
-};
+export { getCanchasConDetalles, getCanchasByClubName };

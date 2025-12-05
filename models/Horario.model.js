@@ -1,5 +1,5 @@
 // server/models/Horario.model.js
-const db = require('../config/db.config');
+import db from '../config/db.config.js';
 
 /**
  * Obtiene el horario maestro (apertura, cierre, duración) de un club 
@@ -101,9 +101,4 @@ async function deleteReservasExpiradas() {
     }
 }
 
-module.exports = {
-    getHorarioMaestroByClubAndDay,
-    getHorariosOcupados,
-    createReserva,
-    deleteReservasExpiradas
-};
+export { getHorarioMaestroByClubAndDay, getHorariosOcupados, createReserva, deleteReservasExpiradas };

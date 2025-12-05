@@ -1,6 +1,6 @@
-const { getReservasByUser, deleteReservaById } = require('../models/reserva.model');
+import { getReservasByUser, deleteReservaById } from '../models/reserva.model.js';
 
-exports.getReservasUsuario = async function (req, res) {
+export async function getReservasUsuario(req, res) {
   const { id } = req.params;
 
   try {
@@ -10,9 +10,9 @@ exports.getReservasUsuario = async function (req, res) {
     console.error('Error en getReservasUsuario:', err);
     res.status(500).json({ error: 'Error obteniendo reservas' });
   }
-};
+}
 
-exports.cancelarReserva = async function (req, res) {
+export async function cancelarReserva(req, res) {
   const { reservaId } = req.params;
   try {
     const affected = await deleteReservaById(reservaId);

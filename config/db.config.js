@@ -1,8 +1,7 @@
 // server/config/db.config.js
-require('dotenv').config(); // Carga las variables del .env
-
-const mysql = require('mysql2');
-const { URL } = require('url');
+import 'dotenv/config'; // Carga las variables del .env
+import mysql from 'mysql2';
+import { URL } from 'url';
 
 // Construir la configuración del pool soportando dos casos:
 // 1) Variables separadas: DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, DB_PORT
@@ -62,4 +61,4 @@ poolPromise.query('SELECT 1').then(() => {
     console.error('DB: detalle del error:', err && err.message ? err.message : err);
 });
 
-module.exports = poolPromise;
+export default poolPromise;

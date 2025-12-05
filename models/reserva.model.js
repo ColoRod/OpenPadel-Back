@@ -1,4 +1,4 @@
-const db = require('../config/db.config');
+import db from '../config/db.config.js';
 
 const getReservasByUser = async (userId) => {
   const [rows] = await db.query(
@@ -30,8 +30,4 @@ const createReserva = async (reserva) => {
   return result.insertId;
 };
 
-module.exports = {
-  getReservasByUser,
-  deleteReservaById,
-  createReserva
-};
+export { getReservasByUser, deleteReservaById, createReserva };

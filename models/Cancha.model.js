@@ -1,7 +1,7 @@
 // server/models/Cancha.model.js
 
 // Importamos la conexión a la base de datos que definimos en db.config.js
-const db = require('../config/db.config');
+import db from '../config/db.config.js';
 
 /**
  * Obtiene la lista de todas las canchas disponibles, sus clubes asociados
@@ -66,6 +66,4 @@ async function findAllCanchasConCaracteristicas(clubName = null) {
 }
 
 // Exportamos la función para usarla en el controlador
-module.exports = {
-    findAllCanchasConCaracteristicas
-};
+export { findAllCanchasConCaracteristicas };

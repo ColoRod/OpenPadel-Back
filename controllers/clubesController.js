@@ -1,7 +1,7 @@
 // Controlador de clubes
-const { getAllClubs } = require('../models/club.model');
+import { getAllClubs } from '../models/club.model.js';
 
-exports.getClubes = async function (req, res) {
+export async function getClubes(req, res) {
   try {
     const clubes = await getAllClubs();
     res.json(clubes);
@@ -9,4 +9,4 @@ exports.getClubes = async function (req, res) {
     console.error('Error en getClubes:', err);
     res.status(500).json({ error: 'Error obteniendo clubes' });
   }
-};
+}

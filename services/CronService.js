@@ -1,7 +1,7 @@
 // server/services/CronService.js
 
-const cron = require('node-cron');
-const HorarioModel = require('../models/Horario.model'); 
+import cron from 'node-cron';
+import * as HorarioModel from '../models/Horario.model.js'; 
 
 // Tarea a ejecutar cada minuto
 const CLEANUP_CRON_EXPRESSION = '* * * * *'; // Ejecuta cada minuto
@@ -29,6 +29,4 @@ function startCleanupJob() {
     console.log('CronJob: Tarea de limpieza programada para ejecutarse cada minuto.');
 }
 
-module.exports = {
-    startCleanupJob
-};
+export default { startCleanupJob };

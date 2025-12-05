@@ -1,4 +1,4 @@
-const db = require('../config/db.config');
+import db from '../config/db.config.js';
 
 const getAllClubs = async () => {
   const [clubs] = await db.query(`
@@ -45,7 +45,4 @@ const getClubById = async (clubId) => {
   };
 };
 
-module.exports = {
-  getAllClubs,
-  getClubById
-};
+export { getAllClubs, getClubById };

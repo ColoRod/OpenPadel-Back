@@ -1,7 +1,7 @@
 // server/routes/Horario.routes.js
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const HorarioController = require('../controllers/Horario.controller');
+import * as HorarioController from '../controllers/Horario.controller.js';
 
 /**
  * @route GET /api/v1/horarios/:canchaId
@@ -14,4 +14,4 @@ router.get('/:canchaId', HorarioController.getHorariosDisponibles);
 // POST /api/v1/horarios
 router.post('/', HorarioController.createReserva);
 
-module.exports = router;
+export default router;

@@ -1,9 +1,9 @@
-const express = require('express');
-const { getClubes } = require('../controllers/clubesController');
+import express from 'express';
+import { getClubes } from '../controllers/clubesController.js';
 
 const router = express.Router();
 
 // Obtener todos los clubes
 router.get('/', getClubes);
 
-module.exports = router;
+export default router;
