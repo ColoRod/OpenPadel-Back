@@ -41,7 +41,9 @@ const getAllByAdmin = (adminId) => {
 };
 
 const confirm = (id) => {
-    const sql = "UPDATE reservas SET estado = 'CONFIRMADA' WHERE reserva_id = ?";
+    // Al confirmar, además de cambiar el estado, limpiamos el campo `expira_en`
+    // para que la reserva sea permanente (no expire automáticamente).
+    const sql = "UPDATE reservas SET estado = 'CONFIRMADA', expira_en = NULL WHERE reserva_id = ?";
     return db.execute(sql, [id]);
 };
 
