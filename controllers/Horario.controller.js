@@ -167,7 +167,23 @@ async function createReserva(req, res) {
     }
 
     try {
-        // Ejecutamos la inserción en el modelo usando el userId proporcionado
+        // ✅ NUEVO: Validar límite de reservas activas antes de insertar
+        const [countResult] = await db.query(
+            `SELECT COUNT(*) AS total
+             FROM reservas
+             WHERE usuario_id = ?
+               AND estado IN ('PENDIENTE', 'CONFIRMADA')`,
+            [userId]
+        );
+        const totalActivas = countResult[0].total;
+
+        if (totalActivas >= 3) {
+            return res.status(400).json({
+                message: "Alcanzaste el límite de 3 reservas activas. Cancelá una antes de hacer una nueva."
+            });
+        }
+        // ✅ FIN NUEVO
+
         const reservaId = await HorarioModel.createReserva(
             canchaId,
             userId,
@@ -184,7 +200,6 @@ async function createReserva(req, res) {
     } catch (error) {
         console.error("Error al crear reserva:", error.message);
         
-        // Manejo de conflicto (si el slot ya estaba ocupado)
         if (error.message.includes('Slot already occupied')) {
             return res.status(409).json({
                 message: "El horario seleccionado ya fue reservado o está pendiente de confirmación."
