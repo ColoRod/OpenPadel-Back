@@ -2,7 +2,19 @@ import db from '../config/db.config.js';
 
 const getReservasByUser = async (userId) => {
   const [rows] = await db.query(
-    `SELECT r.reserva_id, r.fecha, r.hora_inicio, r.hora_fin, r.estado, c.nombre AS club
+    `SELECT 
+      r.reserva_id, 
+      r.fecha, 
+      r.hora_inicio, 
+      r.hora_fin, 
+      r.estado,
+      r.comprobante_url,
+      c.nombre AS club,
+      c.alias,
+      c.cvu,
+      c.titular_cuenta,
+      ch.nombre AS cancha_nombre,
+      ch.precio_base
      FROM reservas r
      JOIN canchas ch ON ch.cancha_id = r.cancha_id
      JOIN clubes c ON c.club_id = ch.club_id
@@ -10,7 +22,6 @@ const getReservasByUser = async (userId) => {
      ORDER BY r.fecha ASC`,
     [userId]
   );
-
   return rows;
 };
 

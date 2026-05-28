@@ -1,6 +1,11 @@
 import multer from "multer";
 
-const storage = multer.diskStorage({
+// memoryStorage para Cloudinary (buffer en memoria)
+const memoryStorage = multer.memoryStorage();
+export const upload = multer({ storage: memoryStorage });
+
+// diskStorage para subidas locales (si lo necesitás en otro lado)
+const diskStorage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, "uploads/");
   },
@@ -9,5 +14,4 @@ const storage = multer.diskStorage({
     cb(null, uniqueSuffix + "-" + file.originalname);
   },
 });
-
-export const upload = multer({ storage });
+export const uploadDisk = multer({ storage: diskStorage });
