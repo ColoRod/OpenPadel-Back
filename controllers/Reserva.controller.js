@@ -52,9 +52,9 @@ export const eliminarReserva = async (req, res) => {
         const { id } = req.params;
         console.log(`➡️ Intentando ELIMINAR reserva con ID: ${id}`);
 
-        const [result] = await Reserva.delete(id);
+        const result = await Reserva.delete(id);
 
-        if (result.affectedRows === 0) {
+        if (!result || result.affectedRows === 0) {
             console.log("⚠️ No se encontró nada para borrar.");
             return res.status(404).json({ message: "No se encontró la reserva" });
         }

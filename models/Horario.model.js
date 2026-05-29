@@ -67,16 +67,30 @@ async function createReserva(canchaId, usuarioId, fecha, horaInicio, horaFin) {
     `;
     const values = [canchaId, usuarioId, fecha, horaInicio, horaFin];
 
+    let conn;
     try {
-        const [result] = await db.query(sql, values);
-        return result.insertId;
+        conn = await db.getConnection();
+        await conn.beginTransaction();
+
+        const [result] = await conn.query(sql, values);
+        const reservaId = result.insertId;
+
+        await conn.query(
+            `INSERT INTO reservas_notificaciones (reserva_id, user_id, estado) VALUES (?, ?, ?)`,
+            [reservaId, usuarioId, 'PENDIENTE']
+        );
+
+        await conn.commit();
+        return reservaId;
     } catch (error) {
-        // Manejo de conflicto de clave única (si el slot ya estaba reservado)
+        if (conn) await conn.rollback();
         if (error.code === 'ER_DUP_ENTRY') {
             throw new Error('Slot already occupied or pending.');
         }
         console.error("Error al crear la reserva:", error);
         throw new Error('Database insertion failed.');
+    } finally {
+        if (conn) conn.release();
     }
 }
 

@@ -47,9 +47,23 @@ const confirm = (id) => {
     return db.execute(sql, [id]);
 };
 
-const remove = (id) => {
-    const sql = "DELETE FROM reservas WHERE reserva_id = ?";
-    return db.execute(sql, [id]);
+const remove = async (id) => {
+    let conn;
+    try {
+        conn = await db.getConnection();
+        await conn.beginTransaction();
+
+        await conn.query('DELETE FROM reservas_notificaciones WHERE reserva_id = ?', [id]);
+        const [result] = await conn.query('DELETE FROM reservas WHERE reserva_id = ?', [id]);
+
+        await conn.commit();
+        return result;
+    } catch (err) {
+        if (conn) await conn.rollback();
+        throw err;
+    } finally {
+        if (conn) conn.release();
+    }
 };
 
 export default {
