@@ -30,15 +30,35 @@ const deleteReservaById = async (reservaId) => {
   return result.affectedRows;
 };
 
-const createReserva = async (reserva) => {
-  // reserva: {cancha_id, user_id, fecha, hora_inicio, hora_fin, estado}
-  const [result] = await db.query(
-    `INSERT INTO reservas (cancha_id, usuario_id, fecha, hora_inicio, hora_fin, estado, expira_en, solicitada_en)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [reserva.cancha_id, reserva.usuario_id, reserva.fecha, reserva.hora_inicio, reserva.hora_fin, reserva.estado || 'pendiente', reserva.expira_en || null, reserva.solicitada_en || null]
-  );
 
-  return result.insertId;
+const createReserva = async (reserva) => {
+  // reserva: {cancha_id, user_id, fecha, hora_inicio, hora_fin, estado, expira_en, solicitada_en}
+  let conn;
+  try {
+    conn = await db.getConnection();
+    await conn.beginTransaction();
+
+    const [result] = await conn.query(
+      `INSERT INTO reservas (cancha_id, usuario_id, fecha, hora_inicio, hora_fin, estado, expira_en, solicitada_en)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [reserva.cancha_id, reserva.usuario_id, reserva.fecha, reserva.hora_inicio, reserva.hora_fin, reserva.estado || 'pendiente', reserva.expira_en || null, reserva.solicitada_en || null]
+    );
+
+    const reservaId = result.insertId;
+    await conn.query(
+      `INSERT INTO reservas_notificaciones (reserva_id, user_id, estado) VALUES (?, ?, ?)`,
+      [reservaId, reserva.usuario_id, reserva.estado || 'pendiente']
+    );
+
+    await conn.commit();
+    return reservaId;
+  } catch (error) {
+    if (conn) await conn.rollback();
+    console.error('Error al crear reserva:', error);
+    throw error;
+  } finally {
+    if (conn) conn.release();
+  }
 };
 
 const getHistorialByUser = async (userId, { club, estado, desde, hasta } = {}) => {
