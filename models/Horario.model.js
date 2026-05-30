@@ -65,31 +65,73 @@ async function createReserva(canchaId, usuarioId, fecha, horaInicio, horaFin) {
         conn = await db.getConnection();
         await conn.beginTransaction();
 
-        // ✅ Verificar si el slot ya está ocupado (ignorando CANCELADA)
-        const [existing] = await conn.query(
+        // Verificar si el slot está ocupado por una reserva activa
+        const [active] = await conn.query(
             `SELECT reserva_id FROM reservas
              WHERE cancha_id = ? AND fecha = ? AND hora_inicio = ?
              AND estado IN ('PENDIENTE', 'CONFIRMADA')`,
             [canchaId, fecha, horaInicio]
         );
 
-        if (existing.length > 0) {
+        if (active.length > 0) {
             await conn.rollback();
             throw new Error('Slot already occupied');
         }
 
-        // Insertar la nueva reserva
-        const sql = `
-            INSERT INTO reservas (cancha_id, usuario_id, fecha, hora_inicio, hora_fin, estado, expira_en)
-            VALUES (?, ?, ?, ?, ?, 'PENDIENTE', DATE_ADD(NOW(), INTERVAL 20 MINUTE));
-        `;
-        const [result] = await conn.query(sql, [canchaId, usuarioId, fecha, horaInicio, horaFin]);
-        const reservaId = result.insertId;
-
-        await conn.query(
-            `INSERT INTO reservas_notificaciones (reserva_id, user_id, estado) VALUES (?, ?, ?)`,
-            [reservaId, usuarioId, 'PENDIENTE']
+        // Verificar si existe una reserva cancelada o rechazada en ese slot
+        const [cancelled] = await conn.query(
+            `SELECT reserva_id FROM reservas
+             WHERE cancha_id = ? AND fecha = ? AND hora_inicio = ?
+             AND estado IN ('CANCELADA', 'RECHAZADA')
+             ORDER BY reserva_id DESC
+             LIMIT 1`,
+            [canchaId, fecha, horaInicio]
         );
+
+        let reservaId;
+
+        if (cancelled.length > 0) {
+            // ✅ Reutilizar la fila existente: actualizar a PENDIENTE
+            reservaId = cancelled[0].reserva_id;
+            await conn.query(
+                `UPDATE reservas 
+                 SET usuario_id = ?, hora_fin = ?, estado = 'PENDIENTE',
+                     expira_en = DATE_ADD(NOW(), INTERVAL 20 MINUTE),
+                     solicitada_en = NOW()
+                 WHERE reserva_id = ?`,
+                [usuarioId, horaFin, reservaId]
+            );
+
+            // Actualizar notificación existente o insertar si no existe
+            const [notif] = await conn.query(
+                `SELECT id FROM reservas_notificaciones WHERE reserva_id = ?`,
+                [reservaId]
+            );
+            if (notif.length > 0) {
+                await conn.query(
+                    `UPDATE reservas_notificaciones SET estado = 'PENDIENTE' WHERE reserva_id = ?`,
+                    [reservaId]
+                );
+            } else {
+                await conn.query(
+                    `INSERT INTO reservas_notificaciones (reserva_id, user_id, estado) VALUES (?, ?, 'PENDIENTE')`,
+                    [reservaId, usuarioId]
+                );
+            }
+        } else {
+            // ✅ No existe ninguna reserva previa: INSERT normal
+            const [result] = await conn.query(
+                `INSERT INTO reservas (cancha_id, usuario_id, fecha, hora_inicio, hora_fin, estado, expira_en, solicitada_en)
+                 VALUES (?, ?, ?, ?, ?, 'PENDIENTE', DATE_ADD(NOW(), INTERVAL 20 MINUTE), NOW())`,
+                [canchaId, usuarioId, fecha, horaInicio, horaFin]
+            );
+            reservaId = result.insertId;
+
+            await conn.query(
+                `INSERT INTO reservas_notificaciones (reserva_id, user_id, estado) VALUES (?, ?, 'PENDIENTE')`,
+                [reservaId, usuarioId]
+            );
+        }
 
         await conn.commit();
         return reservaId;
