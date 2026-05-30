@@ -1,5 +1,5 @@
 import db from '../config/db.config.js';
-import { getReservasByUser, deleteReservaById } from '../models/reserva.model.js';
+import { getReservasByUser, deleteReservaById, getHistorialByUser } from '../models/reserva.model.js';
 import { v2 as cloudinary } from 'cloudinary';
 import streamifier from 'streamifier';
 import '../config/cloudinary.config.js';
@@ -18,14 +18,12 @@ export async function getReservasUsuario(req, res) {
 export async function cancelarReserva(req, res) {
   const { reservaId } = req.params;
   try {
-    // Primero borrar la fila en reservas_notificaciones si existe
-    await db.query(
-      'DELETE FROM reservas_notificaciones WHERE reserva_id = ?',
+    const [result] = await db.query(
+      `UPDATE reservas SET estado = 'CANCELADA' WHERE reserva_id = ?`,
       [reservaId]
     );
-    // Ahora sí borrar la reserva
-    const affected = await deleteReservaById(reservaId);
-    if (affected === 0) return res.status(404).json({ error: 'Reserva no encontrada' });
+    if (result.affectedRows === 0) 
+      return res.status(404).json({ error: 'Reserva no encontrada' });
     res.json({ message: 'Reserva cancelada exitosamente' });
   } catch (err) {
     console.error('Error en cancelarReserva:', err);
@@ -125,5 +123,17 @@ export async function sincronizarNotificaciones(req, res) {
   } catch (err) {
     console.error('Error en sincronizarNotificaciones:', err);
     res.status(500).json({ error: 'Error sincronizando notificaciones' });
+  }
+}
+
+export async function getHistorialUsuario(req, res) {
+  const { id } = req.params;
+  const { club, estado, desde, hasta } = req.query;
+  try {
+    const rows = await getHistorialByUser(id, { club, estado, desde, hasta });
+    res.json(rows);
+  } catch (err) {
+    console.error('Error en getHistorialUsuario:', err);
+    res.status(500).json({ error: 'Error obteniendo historial' });
   }
 }

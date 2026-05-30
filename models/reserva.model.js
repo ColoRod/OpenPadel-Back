@@ -41,4 +41,45 @@ const createReserva = async (reserva) => {
   return result.insertId;
 };
 
-export { getReservasByUser, deleteReservaById, createReserva };
+const getHistorialByUser = async (userId, { club, estado, desde, hasta } = {}) => {
+  let query = `
+    SELECT 
+      r.reserva_id, 
+      r.fecha, 
+      r.hora_inicio, 
+      r.hora_fin, 
+      r.estado,
+      c.nombre AS club,
+      c.imagen_url AS club_imagen,
+      ch.nombre AS cancha_nombre
+    FROM reservas r
+    JOIN canchas ch ON ch.cancha_id = r.cancha_id
+    JOIN clubes c ON c.club_id = ch.club_id
+    WHERE r.usuario_id = ?
+  `;
+  const params = [userId];
+
+  if (club) {
+    query += ` AND c.nombre LIKE ?`;
+    params.push(`%${club}%`);
+  }
+  if (estado && estado !== 'Todos') {
+    query += ` AND r.estado = ?`;
+    params.push(estado.toUpperCase());
+  }
+  if (desde) {
+    query += ` AND r.fecha >= ?`;
+    params.push(desde);
+  }
+  if (hasta) {
+    query += ` AND r.fecha <= ?`;
+    params.push(hasta);
+  }
+
+  query += ` ORDER BY r.fecha DESC, r.hora_inicio DESC`;
+
+  const [rows] = await db.query(query, params);
+  return rows;
+};
+
+export { getReservasByUser, deleteReservaById, createReserva, getHistorialByUser };

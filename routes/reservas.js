@@ -1,5 +1,5 @@
 import express from 'express';
-import { getReservasUsuario, cancelarReserva, subirComprobante,getNotificaciones, inicializarNotificaciones, sincronizarNotificaciones } from '../controllers/reservasController.js';
+import { getReservasUsuario, cancelarReserva, subirComprobante,getNotificaciones, inicializarNotificaciones, sincronizarNotificaciones, getHistorialUsuario } from '../controllers/reservasController.js';
 import { upload } from '../middlewares/upload.js'; // ya lo tenés
 
 const router = express.Router();
@@ -16,5 +16,7 @@ router.patch('/:reservaId/comprobante', upload.single('comprobante'), subirCompr
 router.get('/:userId/notificaciones', getNotificaciones);
 router.post('/:userId/notificaciones/inicializar', inicializarNotificaciones);
 router.put('/:userId/notificaciones/sincronizar', sincronizarNotificaciones);
+
+router.get('/:id/historial', getHistorialUsuario);
 export default router;
 

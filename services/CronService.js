@@ -17,10 +17,15 @@ function startCleanupJob() {
         try {
             // Llamar a la función del modelo para eliminar las reservas
             const deletedCount = await HorarioModel.deleteReservasExpiradas();
-            
             if (deletedCount > 0) {
                 console.log(`CronJob: Limpieza exitosa. Se eliminaron ${deletedCount} reservas expiradas.`);
             }
+
+            const finalizedCount = await HorarioModel.finalizarReservasVencidas();
+            if (finalizedCount > 0) {
+                console.log(`CronJob: Se finalizaron ${finalizedCount} reservas vencidas.`);
+            }
+
         } catch (error) {
             console.error('CronJob: Error crítico durante la limpieza de reservas:', error.message);
         }

@@ -60,19 +60,30 @@ async function getHorariosOcupados(canchaId, fecha) {
  * @returns {Promise<number>} El ID de la reserva insertada.
  */
 async function createReserva(canchaId, usuarioId, fecha, horaInicio, horaFin) {
-    // Insertamos el valor literal 'PENDIENTE' y calculamos la expiración (+20 MINUTE).
-    const sql = `
-        INSERT INTO reservas (cancha_id, usuario_id, fecha, hora_inicio, hora_fin, estado, expira_en)
-        VALUES (?, ?, ?, ?, ?, 'PENDIENTE', DATE_ADD(NOW(), INTERVAL 20 MINUTE));
-    `;
-    const values = [canchaId, usuarioId, fecha, horaInicio, horaFin];
-
     let conn;
     try {
         conn = await db.getConnection();
         await conn.beginTransaction();
 
-        const [result] = await conn.query(sql, values);
+        // ✅ Verificar si el slot ya está ocupado (ignorando CANCELADA)
+        const [existing] = await conn.query(
+            `SELECT reserva_id FROM reservas
+             WHERE cancha_id = ? AND fecha = ? AND hora_inicio = ?
+             AND estado IN ('PENDIENTE', 'CONFIRMADA')`,
+            [canchaId, fecha, horaInicio]
+        );
+
+        if (existing.length > 0) {
+            await conn.rollback();
+            throw new Error('Slot already occupied');
+        }
+
+        // Insertar la nueva reserva
+        const sql = `
+            INSERT INTO reservas (cancha_id, usuario_id, fecha, hora_inicio, hora_fin, estado, expira_en)
+            VALUES (?, ?, ?, ?, ?, 'PENDIENTE', DATE_ADD(NOW(), INTERVAL 20 MINUTE));
+        `;
+        const [result] = await conn.query(sql, [canchaId, usuarioId, fecha, horaInicio, horaFin]);
         const reservaId = result.insertId;
 
         await conn.query(
@@ -82,10 +93,11 @@ async function createReserva(canchaId, usuarioId, fecha, horaInicio, horaFin) {
 
         await conn.commit();
         return reservaId;
+
     } catch (error) {
         if (conn) await conn.rollback();
-        if (error.code === 'ER_DUP_ENTRY') {
-            throw new Error('Slot already occupied or pending.');
+        if (error.message === 'Slot already occupied' || error.code === 'ER_DUP_ENTRY') {
+            throw new Error('Slot already occupied');
         }
         console.error("Error al crear la reserva:", error);
         throw new Error('Database insertion failed.');
@@ -115,4 +127,20 @@ async function deleteReservasExpiradas() {
     }
 }
 
-export { getHorarioMaestroByClubAndDay, getHorariosOcupados, createReserva, deleteReservasExpiradas };
+async function finalizarReservasVencidas() {
+    const sql = `
+        UPDATE reservas 
+        SET estado = 'FINALIZADA'
+        WHERE estado = 'CONFIRMADA'
+        AND TIMESTAMP(fecha, hora_fin) < NOW();
+    `;
+    try {
+        const [result] = await db.query(sql);
+        return result.affectedRows;
+    } catch (error) {
+        console.error("Error al finalizar reservas vencidas:", error);
+        throw new Error('Database update failed');
+    }
+}
+
+export { getHorarioMaestroByClubAndDay, getHorariosOcupados, createReserva, deleteReservasExpiradas, finalizarReservasVencidas };
