@@ -153,15 +153,24 @@ async function createReserva(canchaId, usuarioId, fecha, horaInicio, horaFin) {
  * @returns {Promise<number>} Número de filas eliminadas.
  */
 async function deleteReservasExpiradas() {
-    const sql = `
-        DELETE FROM reservas
-        WHERE estado = 'PENDIENTE' 
-        AND expira_en < NOW();
-    `;
-
     try {
-        const [result] = await db.query(sql);
-        // result.affectedRows contiene el número de filas eliminadas
+        // 1. Borrar primero las notificaciones de las reservas expiradas
+        await db.query(`
+            DELETE FROM reservas_notificaciones
+            WHERE reserva_id IN (
+                SELECT reserva_id FROM reservas
+                WHERE estado = 'PENDIENTE'
+                AND expira_en < NOW()
+            )
+        `);
+
+        // 2. Ahora sí borrar las reservas expiradas
+        const [result] = await db.query(`
+            DELETE FROM reservas
+            WHERE estado = 'PENDIENTE' 
+            AND expira_en < NOW()
+        `);
+
         return result.affectedRows;
     } catch (error) {
         console.error("Error al limpiar reservas expiradas:", error);
