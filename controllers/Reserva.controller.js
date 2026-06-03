@@ -17,12 +17,16 @@ export const obtenerReservas = async (req, res) => {
         const [rows] = await Reserva.getAllByAdmin(adminId);
         console.log("🔍 DEBUG obtenerReservas - reservas encontradas:", rows.length);
 
-        const reservasFormateadas = rows.map(row => ({
-            id: row.id,
+        // NUEVO: Filtramos para NO enviar las que ya están rechazadas
+        const filasActivas = rows.filter(row => row.estado !== 'RECHAZADA');
+
+        const reservasFormateadas = filasActivas.map(row => ({
+            // Usamos reserva_id o id dependiendo de cómo venga de tu base de datos
+            id: row.id || row.reserva_id, 
             courtId: `c${row.cancha_id}`,
             courtName: row.nombreCancha,
             date: new Date(row.fecha).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }),
-            time: row.hora.substring(0, 5),
+            time: row.hora ? row.hora.substring(0, 5) : (row.hora_inicio ? row.hora_inicio.substring(0, 5) : ''),
             status: row.estado === 'CONFIRMADA' ? 'confirmed' : 'pending',
             userName: `${row.nombreUsuario} ${row.apellidoUsuario}`
         }));
@@ -46,7 +50,23 @@ export const confirmarReserva = async (req, res) => {
     }
 };
 
-// ELIMINAR / RECHAZAR / CANCELAR (DELETE)
+// NUEVO: RECHAZAR (PUT) - Borrado lógico
+export const rechazarReserva = async (req, res) => {
+    try {
+        const { id } = req.params;
+        console.log(`➡️ Intentando RECHAZAR reserva con ID: ${id}`);
+        
+        await Reserva.reject(id); 
+        
+        console.log("✅ Reserva rechazada (estado actualizado).");
+        res.json({ message: "Reserva rechazada exitosamente" });
+    } catch (error) {
+        console.error("❌ Error al rechazar:", error);
+        res.status(500).json({ message: "Error al rechazar la reserva" });
+    }
+};
+
+// ELIMINAR FÍSICAMENTE (DELETE) - Se mantiene por si se usa en otro lado
 export const eliminarReserva = async (req, res) => {
     try {
         const { id } = req.params;

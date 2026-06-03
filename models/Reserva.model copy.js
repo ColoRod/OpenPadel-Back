@@ -47,6 +47,12 @@ const confirm = (id) => {
     return db.execute(sql, [id]);
 };
 
+// NUEVA FUNCIÓN: RECHAZAR (Borrado lógico)
+const reject = (id) => {
+    const sql = "UPDATE reservas SET estado = 'RECHAZADA' WHERE reserva_id = ?";
+    return db.execute(sql, [id]);
+};
+
 const remove = async (id) => {
     let conn;
     try {
@@ -70,5 +76,6 @@ export default {
     getAll,
     getAllByAdmin,
     confirm,
+    reject, // ACÁ AGREGAMOS LA NUEVA FUNCIÓN PARA EXPORTARLA
     delete: remove
 };
