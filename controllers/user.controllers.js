@@ -1,17 +1,18 @@
 import pool from "../config/db.config.js";
 import bcrypt from "bcrypt";
+import fs from "fs"; // 1. Importamos el módulo de sistema de archivos
 
 export const getProfile = async (req, res) => {
   try {
     const userId = req.user.id;
 
     console.log("BODY:", req.body);
-console.log("USER:", req.user);
+    console.log("USER:", req.user);
 
     const [rows] = await pool.query(
       `SELECT user_id AS id, nombre, apellido, email, telefono, dni, categoria, foto_url 
-FROM usuarios 
-WHERE user_id = ?`,
+       FROM usuarios 
+       WHERE user_id = ?`,
       [userId]
     );
 
@@ -29,36 +30,59 @@ WHERE user_id = ?`,
 export const updateProfile = async (req, res) => {
   try {
     const userId = req.user.id;
+    const { nombre, apellido, email, password, telefono, categoria, removeFoto } = req.body;
 
-    const { nombre, apellido, email, password, telefono, categoria } = req.body;
-
+    // ------------- VALIDACIONES DE TELÉFONO -------------
     if (telefono) {
+      if (!/^\d+$/.test(telefono)) {
+        return res.status(400).json({
+          message: "El teléfono solo puede contener números"
+        });
+      }
 
-  if (!/^\d+$/.test(telefono)) {
-    return res.status(400).json({
-      message:
-        "El teléfono solo puede contener números"
-    });
-  }
+      if (telefono.length < 10 || telefono.length > 11) {
+        return res.status(400).json({
+          message: "El teléfono debe tener entre 10 y 11 dígitos"
+        });
+      }
+    }
 
-  if (
-    telefono.length < 10 ||
-    telefono.length > 11
-  ) {
-    return res.status(400).json({
-      message:
-        "El teléfono debe tener entre 10 y 11 dígitos"
-    });
-  }
-}
+    // ------------- GESTIÓN DE FOTO DE PERFIL -------------
+    // Buscamos los datos actuales del usuario para saber si ya tenía una foto registrada
+    const [currentRows] = await pool.query(
+      "SELECT foto_url FROM usuarios WHERE user_id = ?",
+      [userId]
+    );
+    const oldFoto = currentRows[0]?.foto_url;
 
-    const foto_url = req.file ? req.file.filename : null;
+    let finalFotoUrl = oldFoto; // Por defecto mantenemos la foto existente
 
+    // Caso A: El usuario subió una nueva foto (reemplazo)
+    if (req.file) {
+      finalFotoUrl = req.file.filename;
+      if (oldFoto) {
+        fs.unlink(`uploads/${oldFoto}`, (err) => {
+          if (err) console.error("Error al eliminar foto vieja reemplazada:", err);
+        });
+      }
+    } 
+    // Caso B: El usuario solicitó eliminar explícitamente su foto
+    else if (removeFoto === true || removeFoto === "true") {
+      finalFotoUrl = null; // Seteamos a null para limpiar la base de datos
+      if (oldFoto) {
+        fs.unlink(`uploads/${oldFoto}`, (err) => {
+          if (err) console.error("Error al eliminar archivo físico de foto:", err);
+        });
+      }
+    }
+
+    // ------------- PROCESAMIENTO DE CONTRASEÑA -------------
     let hashedPassword = null;
     if (password) {
       hashedPassword = await bcrypt.hash(password, 10);
     }
 
+    // ------------- ACTUALIZACIÓN EN BASE DE DATOS -------------
     await pool.query(
       `UPDATE usuarios 
        SET 
@@ -68,7 +92,7 @@ export const updateProfile = async (req, res) => {
          telefono = IFNULL(?, telefono),
          categoria = IFNULL(?, categoria),
          password = IFNULL(?, password),
-         foto_url = IFNULL(?, foto_url)
+         foto_url = ? 
        WHERE user_id = ?`,
       [
         nombre || null,
@@ -77,7 +101,7 @@ export const updateProfile = async (req, res) => {
         telefono || null,
         categoria || null,
         hashedPassword,
-        foto_url,
+        finalFotoUrl, // Controlado directamente por nuestra variable de JS
         userId
       ]
     );
@@ -87,13 +111,11 @@ export const updateProfile = async (req, res) => {
     console.error("UPDATE PROFILE ERROR:", err);
     res.status(500).json({ error: "Error interno" });
   }
-  
 };
 
 export const changePassword = async (req, res) => {
   try {
     const userId = req.user.id;
-
     const { currentPassword, newPassword } = req.body;
 
     const [rows] = await pool.query(
@@ -121,14 +143,13 @@ export const changePassword = async (req, res) => {
     }
 
     const samePassword = await bcrypt.compare(
-    newPassword,
-    user.password
+      newPassword,
+      user.password
     );
 
     if (samePassword) {
-        return res.status(400).json({
-        message:
-        "La nueva contraseña no puede ser igual a la actual"
+      return res.status(400).json({
+        message: "La nueva contraseña no puede ser igual a la actual"
       });
     }
 
@@ -148,7 +169,6 @@ export const changePassword = async (req, res) => {
 
   } catch (err) {
     console.error(err);
-
     res.status(500).json({
       message: "Error interno"
     });
