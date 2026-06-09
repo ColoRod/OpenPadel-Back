@@ -1,16 +1,13 @@
 import pool from "../config/db.config.js";
 import bcrypt from "bcrypt";
-import fs from "fs"; // 1. Importamos el módulo de sistema de archivos
+import fs from "fs";
 
 export const getProfile = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    console.log("BODY:", req.body);
-    console.log("USER:", req.user);
-
     const [rows] = await pool.query(
-      `SELECT user_id AS id, nombre, apellido, email, telefono, dni, categoria, foto_url 
+      `SELECT user_id AS id, club_id, nombre, apellido, email, telefono, dni, categoria, foto_url, rol 
        FROM usuarios 
        WHERE user_id = ?`,
       [userId]
@@ -20,7 +17,26 @@ export const getProfile = async (req, res) => {
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
 
-    res.json(rows[0]);
+    const userData = rows[0];
+
+    if (userData.rol === 'admin' && userData.club_id) {
+      const [clubRows] = await pool.query(
+        `SELECT club_id, nombre, imagen_url 
+         FROM clubes 
+         WHERE club_id = ?`,
+        [userData.club_id]
+      );
+      
+      if (clubRows.length > 0) {
+        userData.club = clubRows[0];
+      } else {
+        userData.club = null;
+      }
+    } else {
+      userData.club = null;
+    }
+
+    res.json(userData);
   } catch (err) {
     console.error("PROFILE ERROR:", err);
     res.status(500).json({ error: "Error interno" });
@@ -32,7 +48,6 @@ export const updateProfile = async (req, res) => {
     const userId = req.user.id;
     const { nombre, apellido, email, password, telefono, categoria, removeFoto } = req.body;
 
-    // ------------- VALIDACIONES DE TELÉFONO -------------
     if (telefono) {
       if (!/^\d+$/.test(telefono)) {
         return res.status(400).json({
@@ -47,42 +62,36 @@ export const updateProfile = async (req, res) => {
       }
     }
 
-    // ------------- GESTIÓN DE FOTO DE PERFIL -------------
-    // Buscamos los datos actuales del usuario para saber si ya tenía una foto registrada
     const [currentRows] = await pool.query(
       "SELECT foto_url FROM usuarios WHERE user_id = ?",
       [userId]
     );
     const oldFoto = currentRows[0]?.foto_url;
 
-    let finalFotoUrl = oldFoto; // Por defecto mantenemos la foto existente
+    let finalFotoUrl = oldFoto; 
 
-    // Caso A: El usuario subió una nueva foto (reemplazo)
     if (req.file) {
       finalFotoUrl = req.file.filename;
       if (oldFoto) {
         fs.unlink(`uploads/${oldFoto}`, (err) => {
-          if (err) console.error("Error al eliminar foto vieja reemplazada:", err);
+          if (err) console.error(err);
         });
       }
     } 
-    // Caso B: El usuario solicitó eliminar explícitamente su foto
     else if (removeFoto === true || removeFoto === "true") {
-      finalFotoUrl = null; // Seteamos a null para limpiar la base de datos
+      finalFotoUrl = null; 
       if (oldFoto) {
         fs.unlink(`uploads/${oldFoto}`, (err) => {
-          if (err) console.error("Error al eliminar archivo físico de foto:", err);
+          if (err) console.error(err);
         });
       }
     }
 
-    // ------------- PROCESAMIENTO DE CONTRASEÑA -------------
     let hashedPassword = null;
     if (password) {
       hashedPassword = await bcrypt.hash(password, 10);
     }
 
-    // ------------- ACTUALIZACIÓN EN BASE DE DATOS -------------
     await pool.query(
       `UPDATE usuarios 
        SET 
@@ -101,7 +110,7 @@ export const updateProfile = async (req, res) => {
         telefono || null,
         categoria || null,
         hashedPassword,
-        finalFotoUrl, // Controlado directamente por nuestra variable de JS
+        finalFotoUrl, 
         userId
       ]
     );
