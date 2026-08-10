@@ -4,8 +4,7 @@ import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors'; // Necesario para la comunicación entre Frontend y Backend
 import CronService from './services/CronService.js';
-import authRoutes from './routes/auth.routes.js';
-import userRoutes from './routes/user.routes.js';
+
 
 // Carga variables desde .env (si existe)
 dotenv.config();
@@ -79,6 +78,8 @@ app.use('/images', express.static(path.join(__dirname, 'uploads')));
 
 
 // 4. CONEXIÓN DE RUTAS API (Endpoints)
+import authRoutes from './routes/auth.routes.js';
+import userRoutes from './routes/user.routes.js';
 // Importa tus rutas de canchas que acabamos de crear
 import canchaRoutes from './routes/cancha.routes.js';
 import horarioRoutes from './routes/Horario.routes.js'; 
