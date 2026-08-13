@@ -1,53 +1,57 @@
-import pool from "../config/db.config.js";
 import bcrypt from "bcrypt";
 import fs from "fs";
 
+import {
+  getUserProfileById,
+  getUserPhotoById,
+  updateUserProfile,
+  getUserPasswordById,
+  updateUserPassword
+} from "../models/User.model.js";
+
+
+// ---------------------- GET PROFILE ----------------------
 export const getProfile = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    const [rows] = await pool.query(
-      `SELECT user_id AS id, club_id, nombre, apellido, email, telefono, dni, categoria, foto_url, rol 
-       FROM usuarios 
-       WHERE user_id = ?`,
-      [userId]
-    );
+    const userData = await getUserProfileById(userId);
 
-    if (rows.length === 0) {
-      return res.status(404).json({ message: 'Usuario no encontrado' });
-    }
-
-    const userData = rows[0];
-
-    if (userData.rol === 'admin' && userData.club_id) {
-      const [clubRows] = await pool.query(
-        `SELECT club_id, nombre, imagen_url 
-         FROM clubes 
-         WHERE club_id = ?`,
-        [userData.club_id]
-      );
-      
-      if (clubRows.length > 0) {
-        userData.club = clubRows[0];
-      } else {
-        userData.club = null;
-      }
-    } else {
-      userData.club = null;
+    if (!userData) {
+      return res.status(404).json({
+        message: "Usuario no encontrado"
+      });
     }
 
     res.json(userData);
+
   } catch (err) {
     console.error("PROFILE ERROR:", err);
-    res.status(500).json({ error: "Error interno" });
+
+    res.status(500).json({
+      error: "Error interno"
+    });
   }
 };
 
+
+// ---------------------- UPDATE PROFILE ----------------------
 export const updateProfile = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { nombre, apellido, email, password, telefono, categoria, removeFoto } = req.body;
 
+    const {
+      nombre,
+      apellido,
+      email,
+      password,
+      telefono,
+      categoria,
+      removeFoto
+    } = req.body;
+
+
+    // Validación teléfono
     if (telefono) {
       if (!/^\d+$/.test(telefono)) {
         return res.status(400).json({
@@ -62,87 +66,108 @@ export const updateProfile = async (req, res) => {
       }
     }
 
-    const [currentRows] = await pool.query(
-      "SELECT foto_url FROM usuarios WHERE user_id = ?",
-      [userId]
-    );
-    const oldFoto = currentRows[0]?.foto_url;
 
-    let finalFotoUrl = oldFoto; 
+    // Obtener foto actual
+    const oldFoto = await getUserPhotoById(userId);
 
+    let finalFotoUrl = oldFoto;
+
+
+    // Si subió una nueva foto
     if (req.file) {
       finalFotoUrl = req.file.filename;
+
       if (oldFoto) {
         fs.unlink(`uploads/${oldFoto}`, (err) => {
-          if (err) console.error(err);
-        });
-      }
-    } 
-    else if (removeFoto === true || removeFoto === "true") {
-      finalFotoUrl = null; 
-      if (oldFoto) {
-        fs.unlink(`uploads/${oldFoto}`, (err) => {
-          if (err) console.error(err);
+          if (err) {
+            console.error(err);
+          }
         });
       }
     }
 
+    // Si pidió eliminar la foto
+    else if (
+      removeFoto === true ||
+      removeFoto === "true"
+    ) {
+      finalFotoUrl = null;
+
+      if (oldFoto) {
+        fs.unlink(`uploads/${oldFoto}`, (err) => {
+          if (err) {
+            console.error(err);
+          }
+        });
+      }
+    }
+
+
+    // Hashear contraseña solamente si mandó una nueva
     let hashedPassword = null;
+
     if (password) {
-      hashedPassword = await bcrypt.hash(password, 10);
+      hashedPassword = await bcrypt.hash(
+        password,
+        10
+      );
     }
 
-    await pool.query(
-      `UPDATE usuarios 
-       SET 
-         nombre = IFNULL(?, nombre),
-         apellido = IFNULL(?, apellido),
-         email = IFNULL(?, email),
-         telefono = IFNULL(?, telefono),
-         categoria = IFNULL(?, categoria),
-         password = IFNULL(?, password),
-         foto_url = ? 
-       WHERE user_id = ?`,
-      [
-        nombre || null,
-        apellido || null,
-        email || null,
-        telefono || null,
-        categoria || null,
+
+    // Actualizar usuario
+    await updateUserProfile(
+      userId,
+      {
+        nombre,
+        apellido,
+        email,
+        telefono,
+        categoria,
         hashedPassword,
-        finalFotoUrl, 
-        userId
-      ]
+        finalFotoUrl
+      }
     );
 
-    res.json({ message: "Perfil actualizado correctamente" });
+
+    res.json({
+      message: "Perfil actualizado correctamente"
+    });
+
   } catch (err) {
     console.error("UPDATE PROFILE ERROR:", err);
-    res.status(500).json({ error: "Error interno" });
+
+    res.status(500).json({
+      error: "Error interno"
+    });
   }
 };
 
+
+// ---------------------- CHANGE PASSWORD ----------------------
 export const changePassword = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { currentPassword, newPassword } = req.body;
 
-    const [rows] = await pool.query(
-      "SELECT password FROM usuarios WHERE user_id = ?",
-      [userId]
-    );
+    const {
+      currentPassword,
+      newPassword
+    } = req.body;
 
-    if (rows.length === 0) {
+
+    // Obtener contraseña actual
+    const currentHash = await getUserPasswordById(userId);
+
+    if (!currentHash) {
       return res.status(404).json({
         message: "Usuario no encontrado"
       });
     }
 
-    const user = rows[0];
 
+    // Comprobar contraseña actual
     const valid = await bcrypt.compare(
       currentPassword,
-      user.password
+      currentHash
     );
 
     if (!valid) {
@@ -151,9 +176,11 @@ export const changePassword = async (req, res) => {
       });
     }
 
+
+    // Comprobar que la nueva sea diferente
     const samePassword = await bcrypt.compare(
       newPassword,
-      user.password
+      currentHash
     );
 
     if (samePassword) {
@@ -162,15 +189,20 @@ export const changePassword = async (req, res) => {
       });
     }
 
+
+    // Hashear nueva contraseña
     const hashedPassword = await bcrypt.hash(
       newPassword,
       10
     );
 
-    await pool.query(
-      "UPDATE usuarios SET password = ? WHERE user_id = ?",
-      [hashedPassword, userId]
+
+    // Guardarla
+    await updateUserPassword(
+      userId,
+      hashedPassword
     );
+
 
     res.json({
       message: "Contraseña actualizada"
@@ -178,6 +210,7 @@ export const changePassword = async (req, res) => {
 
   } catch (err) {
     console.error(err);
+
     res.status(500).json({
       message: "Error interno"
     });

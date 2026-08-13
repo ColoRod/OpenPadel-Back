@@ -2,7 +2,7 @@
 import 'dotenv/config'; // Carga las variables del .env
 import mysql from 'mysql2';
 import { URL } from 'url';
-
+import fs from 'fs';
 // Construir la configuración del pool soportando dos casos:
 // 1) Variables separadas: DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, DB_PORT
 // 2) URL única proporcionada por Railway (ej: DATABASE_URL o MYSQL_URL)
@@ -14,15 +14,14 @@ function buildDbConfigFromEnv() {
             const parsed = new URL(dbUrl);
             return {
                 host: parsed.hostname,
-                user: parsed.username,
                 password: parsed.password,
                 database: parsed.pathname ? parsed.pathname.replace(/^\//, '') : undefined,
                 port: parsed.port ? Number(parsed.port) : undefined,
                 waitForConnections: true,
                 connectionLimit: Number(process.env.DB_CONNECTION_LIMIT) || 10,
-                queueLimit: 0,
-                // Si tu proveedor requiere SSL, puedes activar con DB_REQUIRE_SSL=true
-                ...(process.env.DB_REQUIRE_SSL === 'true' ? { ssl: { rejectUnauthorized: true } } : {})
+                queueLimit: 0,                // Si tu proveedor requiere SSL, puedes activar con DB_REQUIRE_SSL=true
+                ...(process.env.DB_REQUIRE_SSL === 'true' ? { ssl: {  ca: fs.readFileSync('./aiven-ca.pem'),
+    rejectUnauthorized: true} } : {})
             };
         } catch (err) {
             console.error('DB: Error al parsear la URL de conexión desde env:', err.message);
@@ -44,7 +43,8 @@ function buildDbConfigFromEnv() {
         waitForConnections: true,
         connectionLimit: Number(process.env.DB_CONNECTION_LIMIT) || 10,
         queueLimit: 0,
-        ...(process.env.DB_REQUIRE_SSL === 'true' ? { ssl: { rejectUnauthorized: true } } : {})
+        ...(process.env.DB_REQUIRE_SSL === 'true' ? { ssl: {  ca: fs.readFileSync('./aiven-ca.pem'),
+    rejectUnauthorized: true} } : {})
     };
 }
 

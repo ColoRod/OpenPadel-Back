@@ -1,20 +1,36 @@
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
-import fs from 'fs';
-import pool from "../config/db.config.js";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import fs from "fs";
+
+import {
+  getUserByEmail,
+  createUser
+} from "../models/User.model.js";
 
 // Función auxiliar para borrar la foto subida
 const deleteUploadedFile = (file) => {
   if (!file) return;
+
   fs.unlink(`uploads/${file.filename}`, (err) => {
-    if (err) console.log("Error al borrar archivo:", err);
+    if (err) {
+      console.log("Error al borrar archivo:", err);
+    }
   });
 };
+
 
 // ---------------------- REGISTER ----------------------
 export const register = async (req, res) => {
   try {
-    const { nombre, apellido, email, password, dni, telefono, categoria } = req.body;
+    const {
+      nombre,
+      apellido,
+      email,
+      password,
+      dni,
+      telefono,
+      categoria
+    } = req.body;
 
     // ------------- VALIDACIONES -------------
     const validations = [
@@ -42,53 +58,68 @@ export const register = async (req, res) => {
 
     for (const v of validations) {
       if (!v.test) {
-        deleteUploadedFile(req.file);  // <-- borrar la foto
-        return res.status(400).json({ message: v.message });
+        deleteUploadedFile(req.file);
+
+        return res.status(400).json({
+          message: v.message
+        });
       }
     }
 
     // Chequear email repetido
-    const [exists] = await pool.query(
-      "SELECT * FROM usuarios WHERE email = ?",
-      [email]
-    );
+    const existingUser = await getUserByEmail(email);
 
-    if (exists.length > 0) {
+    if (existingUser) {
       deleteUploadedFile(req.file);
-      return res.status(400).json({ message: "El email ya está registrado." });
+
+      return res.status(400).json({
+        message: "El email ya está registrado."
+      });
     }
 
-    if (!nombre || !apellido || !email || !password || !dni || !telefono || !categoria) {
+    // Campos obligatorios
+    if (
+      !nombre ||
+      !apellido ||
+      !email ||
+      !password ||
+      !dni ||
+      !telefono ||
+      !categoria
+    ) {
       deleteUploadedFile(req.file);
-      return res.status(400).json({ message: "Todos los campos son obligatorios." });
+
+      return res.status(400).json({
+        message: "Todos los campos son obligatorios."
+      });
     }
 
     // ------------- REGISTRO FINAL -------------
+
     const hashedPassword = await bcrypt.hash(password, 10);
-    const foto_url = req.file ? req.file.filename : null;
 
-    const [result] = await pool.query(
-      `INSERT INTO usuarios 
-        (rol, nombre, apellido, email, password, dni, telefono, categoria, foto_url)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        "jugador",
-        nombre,
-        apellido,
-        email,
-        hashedPassword,
-        dni,
-        telefono,
-        categoria,
-        foto_url
-      ]
-    );
+    const foto_url = req.file
+      ? req.file.filename
+      : null;
 
-    const userId = result.insertId;
-
-    const token = jwt.sign({ id: userId }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
+    const userId = await createUser({
+      nombre,
+      apellido,
+      email,
+      password: hashedPassword,
+      dni,
+      telefono,
+      categoria,
+      foto_url
     });
+
+    const token = jwt.sign(
+      { id: userId },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "7d"
+      }
+    );
 
     return res.status(201).json({
       message: "Usuario registrado exitosamente",
@@ -101,17 +132,18 @@ export const register = async (req, res) => {
         dni,
         telefono,
         categoria,
-        foto_url,
-      },
+        foto_url
+      }
     });
 
   } catch (error) {
     console.error("REGISTER ERROR:", error);
 
-    // Borrar archivo también si cae al catch
     deleteUploadedFile(req.file);
 
-    return res.status(500).json({ message: "Error en el registro." });
+    return res.status(500).json({
+      message: "Error en el registro."
+    });
   }
 };
 
@@ -121,25 +153,31 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const [rows] = await pool.query(
-      "SELECT * FROM usuarios WHERE email = ?",
-      [email]
+    const user = await getUserByEmail(email);
+
+    if (!user) {
+      return res.status(400).json({
+        error: "Email o contraseña incorrectos"
+      });
+    }
+
+    const ok = await bcrypt.compare(
+      password,
+      user.password
     );
 
-    if (rows.length === 0)
-      return res.status(400).json({ error: "Email o contraseña incorrectos" });
-
-    const user = rows[0];
-
-    const ok = await bcrypt.compare(password, user.password);
-
-    if (!ok)
-      return res.status(400).json({ error: "Contraseña incorrecta" });
+    if (!ok) {
+      return res.status(400).json({
+        error: "Contraseña incorrecta"
+      });
+    }
 
     const token = jwt.sign(
       { id: user.user_id },
       process.env.JWT_SECRET,
-      { expiresIn: "7d" }
+      {
+        expiresIn: "7d"
+      }
     );
 
     res.json({
@@ -158,12 +196,17 @@ export const login = async (req, res) => {
 
   } catch (err) {
     console.error("LOGIN ERROR:", err);
-    res.status(500).json({ error: "Error interno" });
+
+    res.status(500).json({
+      error: "Error interno"
+    });
   }
 };
 
+
 // ---------------------- LOGOUT ----------------------
 export const logout = (req, res) => {
-  res.json({ message: "Logout exitoso" });
+  res.json({
+    message: "Logout exitoso"
+  });
 };
-
