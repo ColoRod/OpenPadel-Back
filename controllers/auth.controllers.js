@@ -38,6 +38,7 @@ const uploadToCloudinary = (file) => {
 // ---------------------- REGISTER ----------------------
 export const register = async (req, res) => {
   try {
+    console.log("FILE RECIBIDO:", req.file);
     const {
       nombre,
       apellido,
