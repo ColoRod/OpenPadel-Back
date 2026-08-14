@@ -1,5 +1,6 @@
 import bcrypt from "bcrypt";
-import fs from "fs";
+
+import cloudinary from "../config/cloudinary.config.js";
 
 import {
   getUserProfileById,
@@ -8,6 +9,49 @@ import {
   getUserPasswordById,
   updateUserPassword
 } from "../models/User.model.js";
+
+
+// ---------------------- SUBIR FOTO A CLOUDINARY ----------------------
+const uploadToCloudinary = (file) => {
+  return new Promise((resolve, reject) => {
+    if (!file) {
+      resolve(null);
+      return;
+    }
+
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: "openpadel/users"
+      },
+      (error, result) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+
+        resolve(result.secure_url);
+      }
+    );
+
+    uploadStream.end(file.buffer);
+  });
+};
+
+
+// ---------------------- ELIMINAR FOTO DE CLOUDINARY ----------------------
+const deleteFromCloudinary = async (photoUrl) => {
+  if (!photoUrl) return;
+
+  try {
+    const parts = photoUrl.split("/");
+    const fileName = parts[parts.length - 1];
+    const publicId = `openpadel/users/${fileName.split(".")[0]}`;
+
+    await cloudinary.uploader.destroy(publicId);
+  } catch (error) {
+    console.error("Error eliminando foto de Cloudinary:", error);
+  }
+};
 
 
 // ---------------------- GET PROFILE ----------------------
@@ -75,16 +119,14 @@ export const updateProfile = async (req, res) => {
 
     // Si subió una nueva foto
     if (req.file) {
-      finalFotoUrl = req.file.filename;
+      finalFotoUrl = await uploadToCloudinary(req.file);
 
+      // Eliminar foto anterior de Cloudinary
       if (oldFoto) {
-        fs.unlink(`uploads/${oldFoto}`, (err) => {
-          if (err) {
-            console.error(err);
-          }
-        });
+        await deleteFromCloudinary(oldFoto);
       }
     }
+
 
     // Si pidió eliminar la foto
     else if (
@@ -94,11 +136,7 @@ export const updateProfile = async (req, res) => {
       finalFotoUrl = null;
 
       if (oldFoto) {
-        fs.unlink(`uploads/${oldFoto}`, (err) => {
-          if (err) {
-            console.error(err);
-          }
-        });
+        await deleteFromCloudinary(oldFoto);
       }
     }
 
