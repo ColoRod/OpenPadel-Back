@@ -1,36 +1,20 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-
-import cloudinary from "../config/cloudinary.config.js";
+import fs from "fs";
 
 import {
   getUserByEmail,
   createUser
 } from "../models/User.model.js";
 
-// ---------------------- SUBIR FOTO A CLOUDINARY ----------------------
-const uploadToCloudinary = (file) => {
-  return new Promise((resolve, reject) => {
-    if (!file) {
-      resolve(null);
-      return;
+// Función auxiliar para borrar la foto subida
+const deleteUploadedFile = (file) => {
+  if (!file) return;
+
+  fs.unlink(`uploads/${file.filename}`, (err) => {
+    if (err) {
+      console.log("Error al borrar archivo:", err);
     }
-
-    const uploadStream = cloudinary.uploader.upload_stream(
-      {
-        folder: "openpadel/users"
-      },
-      (error, result) => {
-        if (error) {
-          reject(error);
-          return;
-        }
-
-        resolve(result.secure_url);
-      }
-    );
-
-    uploadStream.end(file.buffer);
   });
 };
 
@@ -74,6 +58,8 @@ export const register = async (req, res) => {
 
     for (const v of validations) {
       if (!v.test) {
+        deleteUploadedFile(req.file);
+
         return res.status(400).json({
           message: v.message
         });
@@ -84,6 +70,8 @@ export const register = async (req, res) => {
     const existingUser = await getUserByEmail(email);
 
     if (existingUser) {
+      deleteUploadedFile(req.file);
+
       return res.status(400).json({
         message: "El email ya está registrado."
       });
@@ -99,16 +87,20 @@ export const register = async (req, res) => {
       !telefono ||
       !categoria
     ) {
+      deleteUploadedFile(req.file);
+
       return res.status(400).json({
         message: "Todos los campos son obligatorios."
       });
     }
 
-    // ------------- SUBIDA A CLOUDINARY -------------
-    const foto_url = await uploadToCloudinary(req.file);
-
     // ------------- REGISTRO FINAL -------------
+
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    const foto_url = req.file
+      ? req.file.filename
+      : null;
 
     const userId = await createUser({
       nombre,
@@ -146,6 +138,8 @@ export const register = async (req, res) => {
 
   } catch (error) {
     console.error("REGISTER ERROR:", error);
+
+    deleteUploadedFile(req.file);
 
     return res.status(500).json({
       message: "Error en el registro."
