@@ -5,9 +5,9 @@ import { URL } from 'url';
 import fs from 'fs';
 // Construir la configuración del pool soportando dos casos:
 // 1) Variables separadas: DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, DB_PORT
-// 2) URL única proporcionada por Render (ej: DATABASE_URL o MYSQL_URL)
+// 2) URL única proporcionada por Aiven (ej: DATABASE_URL o MYSQL_URL)
 function buildDbConfigFromEnv() {
-    // Si hay una URL completa, parsearla (Render suele exponerla)
+    // Si hay una URL completa, parsearla (Aiven suele exponerla)
     const dbUrl = process.env.DATABASE_URL || process.env.MYSQL_URL || '';
     if (dbUrl) {
         try {
