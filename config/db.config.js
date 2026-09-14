@@ -31,7 +31,7 @@ function buildDbConfigFromEnv() {
 
     // Variables separadas como fallback
     if (!process.env.DB_HOST || !process.env.DB_USER) {
-        console.warn('DB: No se encontraron todas las variables DB_HOST/DB_USER en el entorno. Revisa tu .env o las Environment Variables en Railway.');
+        console.warn('DB: No se encontraron todas las variables DB_HOST/DB_USER en el entorno. Revisa tu .env o las Environment Variables en Render.');
     }
 
     return {
