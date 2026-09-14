@@ -1,7 +1,6 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import fs from "fs";
-import cloudinary from "../config/cloudinary.config.js";
 
 import {
   getUserByEmail,
@@ -12,7 +11,7 @@ import {
 const deleteUploadedFile = (file) => {
   if (!file) return;
 
-  fs.unlink(file.path, (err) => {
+  fs.unlink(`uploads/${file.filename}`, (err) => {
     if (err) {
       console.log("Error al borrar archivo:", err);
     }
@@ -99,19 +98,9 @@ export const register = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-   let foto_url = null;
-
-    console.log("REQ.FILE:", req.file);
-    
-  if (req.file) {
-  const result = await cloudinary.uploader.upload(req.file.path, {
-    folder: "openpadel/users"
-  });
-
-  foto_url = result.secure_url;
-
-  deleteUploadedFile(req.file);
-  }
+    const foto_url = req.file
+      ? req.file.filename
+      : null;
 
     const userId = await createUser({
       nombre,
