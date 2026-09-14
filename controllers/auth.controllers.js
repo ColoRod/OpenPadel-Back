@@ -101,6 +101,8 @@ export const register = async (req, res) => {
 
    let foto_url = null;
 
+    console.log("REQ.FILE:", req.file);
+    
   if (req.file) {
   const result = await cloudinary.uploader.upload(req.file.path, {
     folder: "openpadel/users"
